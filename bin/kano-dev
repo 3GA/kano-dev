@@ -1,0 +1,153 @@
+#!/usr/bin/env python
+
+# kano-dev
+#
+# Copyright (C) 2017 Kano Computing Ltd.
+# License: http://www.gnu.org/licenses/gpl-2.0.txt GNU GPL v2
+#
+# TODO: Description
+
+
+"""
+kano-dev TODO: Description
+
+Usage:
+    kano-dev (production|prod) [--no-logout]
+    kano-dev i18n [--no-logout]
+    kano-dev (development|dev) [--no-logout]
+    kano-dev suite <suite> [--with-repo=<repo>]
+    kano-dev web-api <api> [--no-logout]
+    kano-dev ssh (enable|disable)
+    kano-dev rootssh (enable|disable)
+    kano-dev status
+    kano-dev -h | --help
+
+Commands:
+    production|prod   TODO: Description (wrapper)
+    development|dev   TODO: Description (wrapper)
+    i18n              TODO: Description (wrapper)
+    suite             TODO: Description
+    web-api           TODO: Description
+    ssh               TODO: Description
+    rootssh           TODO: Description
+    status            TODO: Description
+
+Arguments:
+    <suite>           scratch|devel|rc|rc-i18n|release|release-i18n
+    <repo>            dev|prod|i18n
+    <api>             staging|prod|prod-i18n
+
+Options:
+    --no-logout         Don't log out of kano-profile.
+    --with-repo=<repo>  TODO: Description
+    -h, --help          Show this message.
+
+Examples:
+    TODO
+"""
+
+
+import importlib
+import os
+import sys
+
+if __name__ == '__main__' and __package__ is None:
+    DIR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
+    if DIR_PATH != '/usr':
+        sys.path.insert(0, DIR_PATH)
+        LOCALE_PATH = os.path.join(DIR_PATH, 'locale')
+    else:
+        LOCALE_PATH = None
+
+from kano_dev.kano_apt_source_conf import KanoAptSourceConf
+from kano_dev.kano_world_api_conf import KanoWorldApiConf
+from kano_dev.kano_ssh_client import KanoSshClient
+from kano_dev.utils import is_root
+
+from kano_dev.return_codes import *
+
+
+def main(args):
+
+    # Configuration for Kano OS 'production' environment.
+    if args['production'] or args['prod']:
+        args['suite'] = True
+        args['<suite>'] = 'release'
+        args['web-api'] = True
+        args['<api>'] = 'prod'
+        args['ssh'] = True
+        args['disable'] = True
+
+    # Configuration for Kano OS 'i18n' environment.
+    elif args['i18n']:
+        args['suite'] = True
+        args['<suite>'] = 'release-i18n'
+        args['web-api'] = True
+        args['<api>'] = 'prod-i18n'
+        args['ssh'] = True
+        args['disable'] = True
+
+    # Configuration for Kano OS 'devel' environment.
+    elif args['development'] or args['dev']:
+        args['suite'] = True
+        args['<suite>'] = 'devel'
+        args['web-api'] = True
+        args['<api>'] = 'staging'
+        args['ssh'] = True
+        args['enable'] = True
+
+    # Execution of each command. This is not an if + elif chain because of the
+    # production and development wrappers above. The docopt usage interface won't
+    # let these to be actually chained.
+
+    if args['suite']:
+        suite = args['<suite>']
+        repo = args['--with-repo'] or ''
+
+        KanoAptSourceConf().set_suite(suite, repo=repo)
+
+    if args['web-api']:
+        api = args['<api>']
+
+        KanoWorldApiConf().set_api(api)
+
+    if args['ssh']:
+        enabled = args['enable']
+
+        KanoSshClient().set_enabled(enabled)
+
+    if args['rootssh']:
+        enabled = args['enable']
+
+        KanoSshClient().set_root_connection(enabled)
+
+    if args['status']:
+        KanoAptSourceConf().status()
+        KanoWorldApiConf().status()
+        KanoSshClient().status()
+
+    return RC_SUCCESS
+
+
+if __name__ == '__main__':
+    if not is_root():
+        print "Program must be executed with root priviledges."
+        sys.exit(RC_REQUIRES_ROOT)
+
+    required_python_modules = ['docopt', 'kano_settings']
+    for module in required_python_modules:
+        try:
+            importlib.import_module(module)
+        except ImportError:
+            print "Missing dependency: [{}] python module.".format(module)
+            sys.exit(RC_MISSING_DEPENDENCIES)
+
+    import docopt
+
+    try:
+        args = docopt.docopt(__doc__)
+    except docopt.DocoptExit:
+        print __doc__
+        sys.exit(RC_INCORRECT_ARGS)
+
+    sys.exit(main(args) or RC_SUCCESS)
