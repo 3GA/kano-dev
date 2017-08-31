@@ -58,7 +58,10 @@ def dropbear_conf(real_temp_dir, request):
     with open(dropbear_conf_path, 'w') as dropbear_conf:
         dropbear_conf.write(config)
 
-    yield dropbear_conf
+    yield {
+        'file': dropbear_conf,
+        'param': request.param
+    }
 
     # Clean up code, remove the file altogether.
     if os.path.exists(dropbear_conf_path):

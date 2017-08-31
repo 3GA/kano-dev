@@ -37,7 +37,7 @@ class TestKanoSshClient(object):
         k.KanoSshClient().set_root_connection(True)
 
         # Read back the dropbear configuration file.
-        with open(dropbear_conf.name, 'r') as dropbear_conf:
+        with open(dropbear_conf['file'].name, 'r') as dropbear_conf:
             dropbear_conf_lines = [line.strip() for line in dropbear_conf.readlines()]
 
         assert(expected_dropbear_extra_args in dropbear_conf_lines)
@@ -64,7 +64,7 @@ class TestKanoSshClient(object):
         k.KanoSshClient().set_root_connection(False)
 
         # Read back the dropbear configuration file.
-        with open(dropbear_conf.name, 'r') as dropbear_conf:
+        with open(dropbear_conf['file'].name, 'r') as dropbear_conf:
             dropbear_conf_lines = [line.strip() for line in dropbear_conf.readlines()]
 
         assert(expected_dropbear_extra_args in dropbear_conf_lines)
@@ -79,18 +79,13 @@ class TestKanoSshClient(object):
         """
         from kano_dev import kano_ssh_client as k
 
-        # Read back the dropbear configuration file.
-        with open(dropbear_conf.name, 'r') as dropbear_conf:
-            dropbear_conf_lines = [line.strip() for line in dropbear_conf.readlines()]
-
-        root_ssh_line = 'DROPBEAR_EXTRA_ARGS="{}"'.format(ROOT_SSH['DROPBEAR_EXTRA_ARGS'])
-        no_root_ssh_line = 'DROPBEAR_EXTRA_ARGS="{}"'.format(NO_ROOT_SSH['DROPBEAR_EXTRA_ARGS'])
-
-        # Determine what the function should return from what is in the configuration.
-        if root_ssh_line in dropbear_conf_lines:
+        # Determine what the function should return based on the fixture's arguments.
+        if dropbear_conf['param'] is ROOT_SSH:
             expected_rv = True
-        elif no_root_ssh_line in dropbear_conf_lines:
+        elif dropbear_conf['param'] is NO_ROOT_SSH:
             expected_rv = False
+        else:
+            assert False
 
         # Mock the paths to the dropbear configuration file. This tricks the function
         # call to do the work at a different path.
